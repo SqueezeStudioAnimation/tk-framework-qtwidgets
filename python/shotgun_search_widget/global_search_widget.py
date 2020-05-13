@@ -71,3 +71,7 @@ class GlobalSearchWidget(ShotgunSearchWidget):
         """
 
         self.completer().set_searchable_entity_types(types_dict)
+
+    def set_project(self, project):
+        self.completer().set_project(project)
+

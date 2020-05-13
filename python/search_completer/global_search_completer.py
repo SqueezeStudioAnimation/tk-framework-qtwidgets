@@ -65,6 +65,8 @@ class GlobalSearchCompleter(SearchCompleter):
             "PublishedFile": [],
         }
 
+        self._restricted_project = None
+
     def get_result(self, model_index):
         """
         Return the entity data for the supplied model index or None if there is
@@ -129,6 +131,9 @@ class GlobalSearchCompleter(SearchCompleter):
         """
         self._entity_search_criteria = types_dict
 
+    def set_project(self, project):
+        self._restricted_project = project
+
     def _set_item_delegate(self, popup, text):
         """
         Sets an item delegate for the completer's popup.
@@ -163,7 +168,11 @@ class GlobalSearchCompleter(SearchCompleter):
             # this is a Project-only search. don't restrict by the current project id
             pass
         elif self._bundle.context.project:
-            project_ids.append(self._bundle.context.project["id"])
+            if self._restricted_project:
+                project_ids.append(self._restricted_project["id"])
+                pass
+            else:
+                project_ids.append(self._bundle.context.project["id"])
 
         return self._sg_data_retriever.execute_text_search(
             text, self._entity_search_criteria, project_ids

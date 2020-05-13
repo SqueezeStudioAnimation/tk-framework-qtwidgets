@@ -43,7 +43,7 @@ class ContextWidget(QtGui.QWidget):
     # emitted when a settings button is clicked on a node
     context_changed = QtCore.Signal(object)
 
-    def __init__(self, parent):
+    def __init__(self, parent, project=None):
         """
         :param parent: The model parent.
         :type parent: :class:`~PySide.QtGui.QObject`
@@ -51,7 +51,7 @@ class ContextWidget(QtGui.QWidget):
         super(ContextWidget, self).__init__(parent)
 
         self._bundle = sgtk.platform.current_bundle()
-        project = self._bundle.context.project
+        self._project = project if project else self._bundle.context.project
 
         # get instance of user settings to save/restore values across sessions
         self._settings = settings.UserSettings(self._bundle)
@@ -59,7 +59,7 @@ class ContextWidget(QtGui.QWidget):
         # the key we'll use to store/retrieve recent contexts via user settings
         self._settings_recent_contexts_key = "%s_recent_contexts_%s" % (
             self._bundle.name,
-            project["id"],
+            self._project["id"],
         )
 
         # we will do a bg query that requires an id to catch results
@@ -96,6 +96,9 @@ class ContextWidget(QtGui.QWidget):
         # set up the UI
         self.ui = Ui_ContextWidget()
         self.ui.setupUi(self)
+
+        if project:
+            self.ui.link_search.set_project(project)
 
         # Loads the style sheet for the widget
         qss_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "style.qss")
@@ -291,7 +294,7 @@ class ContextWidget(QtGui.QWidget):
         task_manager.task_failed.connect(self._on_task_failed)
 
         # query all my assigned tasks in a bg task
-        self._my_tasks_query_id = task_manager.add_task(_query_my_tasks)
+        self._my_tasks_query_id = task_manager.add_task(_query_my_tasks, task_args=[self._project])
 
         # get recent contexts from user settings
         self._get_recent_contexts()
@@ -327,7 +330,7 @@ class ContextWidget(QtGui.QWidget):
 
         # Query Shotgun for valid entity types for PublishedFile.entity field
         self._schema_query_id = self._task_manager.add_task(
-            _query_entity_schema, task_args=[entity_type, field_name]
+            _query_entity_schema, task_args=[self._project, entity_type, field_name]
         )
 
     def restrict_entity_types(self, entity_types):
@@ -541,7 +544,7 @@ class ContextWidget(QtGui.QWidget):
         self._task_menu.clear()
 
         bundle = sgtk.platform.current_bundle()
-        project = bundle.context.project
+        # project = bundle.context.project
 
         # ---- build the "Related" menu
 
@@ -584,7 +587,7 @@ class ContextWidget(QtGui.QWidget):
 
                 # get the display name for the status code
                 status_display = shotgun_globals.get_status_display_name(
-                    status_code, project.get("id")
+                    status_code, self._project.get("id")
                 )
 
                 # get the actions for this code
@@ -629,6 +632,8 @@ class ContextWidget(QtGui.QWidget):
         """
         bundle = sgtk.platform.current_bundle()
         context = bundle.sgtk.context_from_entity(entity_type, entity_id)
+        if not context.entity.get("name"):
+            context.entity["name"] = entity_name
         self._on_context_activated(context)
 
     def _on_task_search_toggled(self, checked):
@@ -965,13 +970,13 @@ def _get_context_icon_path(context):
         return ""
 
 
-def _query_my_tasks():
+def _query_my_tasks(project):
     """
     Called via bg task to query SG for tasks assigned to the current user.
     """
 
     bundle = sgtk.platform.current_bundle()
-    project = bundle.context.project
+    # project = bundle.context.project
     current_user = bundle.context.user
 
     logger.debug("Querying tasks for the current user: %s" % (current_user,))
@@ -1000,7 +1005,7 @@ def _query_my_tasks():
     return bundle.shotgun.find("Task", filters, fields=task_fields, order=order)
 
 
-def _query_entity_schema(entity_type, field_name):
+def _query_entity_schema(project, entity_type, field_name):
     """
     Called as bg task to query SG for the field schema
     for the given type and field.
@@ -1011,7 +1016,7 @@ def _query_entity_schema(entity_type, field_name):
     logger.debug("Querying %s.%s schema..." % (entity_type, field_name))
 
     bundle = sgtk.platform.current_bundle()
-    project = bundle.context.project
+    # project = bundle.context.project
 
     return bundle.shotgun.schema_field_read(
         entity_type, field_name=field_name, project_entity=project
