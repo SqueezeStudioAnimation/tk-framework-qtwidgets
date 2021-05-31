@@ -45,7 +45,10 @@ class TreeProxyModel(HierarchicalFilteringProxyModel):
     @filter_items.setter
     def filter_items(self, items):
         self._filter_items = items
+
+        self.layoutAboutToBeChanged.emit()
         self.invalidateFilter()
+        self.layoutChanged.emit()
 
     def _is_row_accepted(self, src_row, src_parent_idx, parent_accepted):
         """

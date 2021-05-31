@@ -135,6 +135,9 @@ class FilterItem(object):
         TODO move to shotgun_globals.date_time
         """
 
+        if dt is None:
+            return "No Date"
+
         if isinstance(dt, six.string_types):
             dt = datetime.datetime.strptime(dt, "%Y-%m-%d")
             epoch = datetime.datetime.utcfromtimestamp(0)

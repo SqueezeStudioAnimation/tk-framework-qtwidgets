@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Autodesk, Inc.
+# Copyright (c) 2015 Shotgun Software Inc.
 #
 # CONFIDENTIAL AND PROPRIETARY
 #
@@ -6,9 +6,5 @@
 # Source Code License included in this distribution package. See LICENSE.
 # By accessing, using, copying or modifying this work you indicate your
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
-# not expressly granted therein are reserved by Autodesk, Inc.
+# not expressly granted therein are reserved by Shotgun Software Inc.
 
-from .filter_item import FilterItem
-from .filter_menu import FilterMenu, ShotgunFilterMenu
-from .filter_menu_button import FilterMenuButton
-from .tree_proxy_model import TreeProxyModel

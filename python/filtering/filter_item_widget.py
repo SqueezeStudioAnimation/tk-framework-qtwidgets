@@ -29,6 +29,8 @@ class FilterItemWidget(QtGui.QWidget):
 
         super(FilterItemWidget, self).__init__(parent)
 
+        self._id = filter_data.get("id")
+
         # Widget style
         # self.setStyleSheet(":hover{background:palette(light)}");
 
@@ -61,12 +63,21 @@ class FilterItemWidget(QtGui.QWidget):
         # Default to choices filter widget
         return ChoicesFilterItemWidget(filter_data, parent)
 
+    def name(self):
+        """
+        """
+
     def has_value(self):
         """
         """
         raise sgtk.TankError("Abstract class method not overriden")
 
-    def action_triggered(self):
+    def action_triggered(self, value=None):
+        """
+        Override this method to provide any functionality.
+        """
+
+    def update_widget(self, data):
         """
         Override this method to provide any functionality.
         """
@@ -88,18 +99,6 @@ class FilterItemWidget(QtGui.QWidget):
         painter.begin(self)
 
         painter.end()
-
-
-# class DateTimeFilterItemWidget(FilterItem):
-#     """
-#     """
-
-#     def __init__(self, filter_data, parent=None):
-#         """
-#         Constructor
-#         """
-
-#         super(DateTimeFilterItemWidget, self).__init__(filter_data, parent)
 
 
 class ChoicesFilterItemWidget(FilterItemWidget):
@@ -126,25 +125,39 @@ class ChoicesFilterItemWidget(FilterItemWidget):
             layout.addWidget(icon_label)
 
         name = filter_data.get("display_name", filter_data.get("filter_value"))
-        label = QtGui.QLabel(name)
-        layout.addWidget(label)
+        self.label = QtGui.QLabel(name)
+        layout.addWidget(self.label)
 
+        self.count_label = QtGui.QLabel()
         count = filter_data.get("count")
         if count:
-            count_label = QtGui.QLabel()
-            count_label.setText(str(count))
+            self.count_label.setText(str(count))
             layout.addStretch()
-            layout.addWidget(count_label)
+            layout.addWidget(self.count_label)
+
+    def name(self):
+        return self.label.text()
+
+    def update_widget(self, data):
+        """
+        """
+
+        count = str(data.get("count", 0))
+        self.count_label.setText(count)
+        self.count_label.repaint()
 
     def has_value(self):
         return self.checkbox.isChecked()
 
-    def action_triggered(self):
+    def action_triggered(self, value=None):
         """
         """
 
         # Keep the item checkbox with the action check
-        self.checkbox.setChecked(not self.checkbox.isChecked())
+        if value is None:
+            self.checkbox.setChecked(not self.checkbox.isChecked())
+        else:
+            self.checkbox.setChecked(value)
 
     def clear_value(self):
         """
