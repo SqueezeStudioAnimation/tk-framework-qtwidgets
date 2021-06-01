@@ -29,10 +29,8 @@ class TreeProxyModel(HierarchicalFilteringProxyModel):
         TreeProxyModel constructor
         """
 
-        # HierarchicalFilteringProxyModel.__init__(self, parent)
         super(TreeProxyModel, self).__init__(*args, **kwargs)
 
-        # self._filter_items = filter_items
         self._filter_items = []
 
     @property

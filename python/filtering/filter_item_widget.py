@@ -18,18 +18,26 @@ from ..search_widget import SearchWidget
 
 class FilterItemWidget(QtGui.QWidget):
     """
+    A widget to represent a FilterItem object.
     """
+
+    SINGLE_VALUE_TYPES = [
+        FilterItem.TYPE_NUMBER,
+        FilterItem.TYPE_STR,
+        FilterItem.TYPE_TEXT,
+    ]
 
     filter_item_checked = QtCore.Signal(int)
     filter_item_text_changed = QtCore.Signal(str)
 
-    def __init__(self, filter_data, parent=None):
+    def __init__(self, filter_id, group_id, filter_data, parent=None):
         """
         """
 
         super(FilterItemWidget, self).__init__(parent)
 
-        self._id = filter_data.get("id")
+        self._id = filter_id
+        self._group_id = group_id
 
         # Widget style
         # self.setStyleSheet(":hover{background:palette(light)}");
@@ -41,8 +49,24 @@ class FilterItemWidget(QtGui.QWidget):
         layout.setAlignment(QtCore.Qt.AlignLeft)
         self.setLayout(layout)
 
+    @property
+    def id(self):
+        """
+        Get the id for this widget.
+        """
+
+        return self._id
+
+    @property
+    def group_id(self):
+        """
+        Get the group id for this widget.
+        """
+
+        return self._group_id
+
     @classmethod
-    def create(cls, filter_data, parent=None):
+    def create(cls, filter_id, group_id, filter_data, parent=None):
         """
         """
 
@@ -55,13 +79,15 @@ class FilterItemWidget(QtGui.QWidget):
             FilterItem.TYPE_STR,
             FilterItem.TYPE_TEXT,
         ):
-            return LineEditFilterItemWidget(filter_data, parent)
-
-        # if filter_type in (FilterItem.TYPE_DATE, FilterItem.TYPE_DATETIME):
-        #     return DateTimeFilterItemWidget(filter_data, parent)
+            return TextFilterItemWidget(filter_id, group_id, filter_data, parent)
 
         # Default to choices filter widget
-        return ChoicesFilterItemWidget(filter_data, parent)
+        return ChoicesFilterItemWidget(filter_id, group_id, filter_data, parent)
+
+    def restore(self, widget):
+        """
+        Restore the widget state from another widget.
+        """
 
     def name(self):
         """
@@ -105,12 +131,14 @@ class ChoicesFilterItemWidget(FilterItemWidget):
     """
     """
 
-    def __init__(self, filter_data, parent=None):
+    def __init__(self, filter_id, group_id, filter_data, parent=None):
         """
         Constructor
         """
 
-        super(ChoicesFilterItemWidget, self).__init__(filter_data, parent)
+        super(ChoicesFilterItemWidget, self).__init__(
+            filter_id, group_id, filter_data, parent
+        )
 
         layout = self.layout()
 
@@ -138,6 +166,13 @@ class ChoicesFilterItemWidget(FilterItemWidget):
     def name(self):
         return self.label.text()
 
+    def restore(self, widget):
+        """
+        Restore this filter widget from another widget, of the same type.
+        """
+
+        self.action_triggered(widget.has_value())
+
     def update_widget(self, data):
         """
         """
@@ -147,6 +182,10 @@ class ChoicesFilterItemWidget(FilterItemWidget):
         self.count_label.repaint()
 
     def has_value(self):
+        """
+        Return True if the the filter widget currently has a value.
+        """
+
         return self.checkbox.isChecked()
 
     def action_triggered(self, value=None):
@@ -157,49 +196,68 @@ class ChoicesFilterItemWidget(FilterItemWidget):
         if value is None:
             self.checkbox.setChecked(not self.checkbox.isChecked())
         else:
+            was_checked = self.checkbox.isChecked()
             self.checkbox.setChecked(value)
+
+            if was_checked == self.checkbox.isChecked():
+                # We want to know that the action was triggered, even if the state did not
+                # necessary change.
+                self.filter_item_checked.emit(self.checkbox.checkState())
 
     def clear_value(self):
         """
+        Clear the filter widget current value.
         """
 
         self.checkbox.setChecked(False)
 
 
-class LineEditFilterItemWidget(FilterItemWidget):
+class TextFilterItemWidget(FilterItemWidget):
     """
+    A filter widget for searching text values.
     """
 
-    def __init__(self, filter_data, parent=None):
-        super(LineEditFilterItemWidget, self).__init__(filter_data, parent=parent)
+    def __init__(self, filter_id, group_id, filter_data, parent=None):
+        """
+        Constructor.
+        """
 
-        layout = self.layout()
-
-        # name = filter_data.get("display_name", filter_data.get("filter_value"))
-        # label = QtGui.QLabel(name)
-        # layout.addWidget(label)
+        super(TextFilterItemWidget, self).__init__(
+            filter_id, group_id, filter_data, parent=parent
+        )
 
         # TODO filter operation may demand a different tyep of filter widget
 
-        # self.line_edit = QtGui.QLineEdit()
         self.line_edit = SearchWidget(self)
-        # self.line_edit.textChanged.connect(self.filter_item_text_changed)
-        self.line_edit.search_edited.connect(self._text_changed)
+        self.line_edit.search_edited.connect(self._search_edited_cb)
+
+        layout = self.layout()
         layout.addWidget(self.line_edit)
 
+    def restore(self, widget):
+        """
+        Restore this filter widget from another widget, of the same type.
+        """
+
+        self.line_edit._set_search_text(widget.line_edit.search_text)
+
     def has_value(self):
-        return self.line_edit.search_text
-        # return self.line_edit.text()
+        """
+        Return True if the the filter widget currently has a value.
+        """
+
+        return bool(self.line_edit.search_text)
 
     def clear_value(self):
         """
+        Clear the filter widget current value.
         """
 
         self.line_edit.clear()
-        # self.line_edit._on_clear_clicked()
 
-    def _text_changed(self, text):
+    def _search_edited_cb(self, text):
         """
+        Callback triggered on the SearchWidget text changed.
         """
 
         self.filter_item_text_changed.emit(text)

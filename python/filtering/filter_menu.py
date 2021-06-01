@@ -26,247 +26,251 @@ class FilterMenu(ShotgunMenu):
 
     filters_changed = QtCore.Signal()
 
-    def __init__(self, filters, parent, fields=None):
+    def __init__(self, filters_def, parent, fields=None):
         """
         Constructor
         """
 
         super(FilterMenu, self).__init__(parent)
 
-        # FIXME Let it be resizable
-        # self.setMinimumWidth(250)
-        # self.setMaximumWidth(250)
-
-        self._popout_widget = QtGui.QWidget()
-        self._popout_widget.hide()
-
         # TODO add filter -- would need to requery with added fields if data is not available
         # TODO save filter state
-        if fields:
-            self._visible_fields = fields or []
-        else:
-            # Take the first three if visible filters is not defined (to avoid overwhelming number of filters)
-            if isinstance(filters, dict):
-                filter_fields = filters.keys()
-                if len(filter_fields) > 3:
-                    self._visible_fields = filters.keys()[:3]
-                else:
-                    self._visible_fields = filter_fields
-            else:
-                # self._visible_fields = [f["field"] for f in filters[:3]]
-                self._visible_fields = []
 
-        self._group_filters = []
+        # A mapping of filter group id (the filter field) to list of filters that belong to that group.
         self._filters_by_field = {}
+        # A mapping of filter id to its corresponding Qt action widget.
         self._actions_by_filter = {}
-        self._config_menu = ShotgunMenu(self)
-        self._config_menu.setTitle("More Filters")
 
-        self.build_menu(filters)
+        if fields:
+            self._visible_fields = fields
 
-    def build_menu(self, filters_list):
+        elif filters_def:
+            # Take the first three if visible filters is not defined (to avoid overwhelming number of filters)
+            filter_fields = filters_def.keys()
+            if len(filter_fields) > 3:
+                self._visible_fields = filter_fields[:3]
+            else:
+                self._visible_fields = filter_fields
+        else:
+            self._visible_fields = []
+
+        # Initialize the menu
+        self.build_menu(filters_def)
+
+    @property
+    def active_filter(self):
         """
+        Return the current filters that are set within the menu.
         """
 
-        actions_by_filter = dict(self._actions_by_filter)
+        return self._active_filter
 
-        self.clear_menu()
+    @property
+    def has_filtering(self):
+        """
+        Return True if the menu has any active filtering.
+        """
 
-        if not filters_list:
+        return bool(self._active_filter and self._active_filter.filters)
+
+    def build_menu(self, filters_def):
+        """
+        Build the filter menu. Reset and clear the current menu before building.
+        """
+
+        if not filters_def:
             return
 
-        if isinstance(filters_list, dict):
-            for field, data in filters_list.items():
-                filters = []
-                actions = []
+        assert isinstance(filters_def, dict), "Unsupported filters type"
+        if not isinstance(filters_def, dict):
+            return
 
-                if data.get("type") in (
-                    FilterItem.TYPE_NUMBER,
-                    FilterItem.TYPE_STR,
-                    FilterItem.TYPE_TEXT,
-                ):
-                    filter_data = {
-                        "filter_type": data["type"],
-                        "filter_op": FilterItem.default_op_for_type(data["type"]),
-                        "data_func": lambda i, f=field: get_index_data(i, f),
-                    }
-                    (filter_item, action) = self.create_filter_item_and_action(
-                        filter_data
-                    )
-                    filters.append((filter_item, action))
-                    actions.append(action)
+        prev_actions = dict(self._actions_by_filter)
 
-                else:
-                    for filter_name, filter_value in data.get("values", {}).items():
-                        filter_data = {
-                            "filter_type": data["type"],
-                            "filter_op": FilterItem.default_op_for_type(data["type"]),
-                            "data_func": lambda i, f=field: get_index_data(i, f),
+        # First reset and clear the menu.
+        self.clear_menu()
+
+        # Iterate through te filter definitions, given by field id (the grouping), and create the
+        # filter item object and widgets to manage each filter.
+        for field_id, data in filters_def.items():
+            # For each grouping, build up a list of filter items and Qt actions, to then add to the
+            # menu once all filter items for the grouping are created.
+            filter_items = []
+            actions = []
+            filter_item_data = {
+                "filter_type": data["type"],
+                "filter_op": FilterItem.default_op_for_type(data["type"]),
+                "filter_role": data.get("filter_role"),
+                "data_func": data.get("data_func"),
+            }
+
+            if data["type"] in FilterItemWidget.SINGLE_VALUE_TYPES:
+                # There is only one filter widget/action for this filter type; e.g. there is a
+                # line edit widget to perform the filtering for this type.
+
+                # FIXME let the FilterItem define the id
+                filter_id = field_id
+
+                (filter_item, action) = self._create_filter_item_and_action(
+                    filter_id, field_id, filter_item_data
+                )
+
+                prev_action = prev_actions.get(filter_id)
+                if prev_action:
+                    widget = prev_action.defaultWidget()
+                    action.defaultWidget().restore(widget)
+
+                filter_items.append(filter_item)
+                actions.append(action)
+                self._actions_by_filter[filter_id] = action
+
+            else:
+                # There are multiple filter widgets for this filter type; e.g. there is a list
+                # of choices to select from, where each choice is a filter widget.
+                for filter_value_name, filter_value in data.get("values", {}).items():
+                    filter_item_data.update(
+                        {
                             "filter_value": filter_value.get("value"),
-                            "display_name": filter_value.get("name", str(filter_name)),
+                            "display_name": filter_value.get(
+                                "name", str(filter_value_name)
+                            ),
                             "count": filter_value.get("count", 0),
                         }
-                        (filter_item, action) = self.create_filter_item_and_action(
-                            filter_data
-                        )
+                    )
 
-                        filter_id = "{field}.{value_name}".format(
-                            field=field, value_name=filter_name
-                        )
-                        # self._filter_items[filter_id] = filter_item
-                        self._actions_by_filter[filter_id] = action
+                    # FIXME let the FilterItem define the id
+                    filter_id = "{field_id}.{value_name}".format(
+                        field_id=field_id, value_name=filter_value_name
+                    )
 
-                        filters.append((filter_item, action))
-                        actions.append(action)
+                    (filter_item, action) = self._create_filter_item_and_action(
+                        filter_id, field_id, filter_item_data
+                    )
 
-                        # FIXME
-                        # filter UI seems to refresh OK but maybe the proxy model needs to be updated on refresh?
-                        # prev_action = actions_by_filter.get(filter_id)
-                        # if prev_action:
-                        # checked = prev_action.isChecked()
-                        # action.defaultWidget().action_triggered(checked)
-                        # action.setChecked(checked)
+                    prev_action = prev_actions.get(filter_id)
+                    if prev_action:
+                        widget = prev_action.defaultWidget()
+                        action.defaultWidget().restore(widget)
 
-                self._group_filters.append(filters)
-                self._filters_by_field[field] = filters
+                    filter_items.append(filter_item)
+                    actions.append(action)
+                    self._actions_by_filter[filter_id] = action
 
-                sorted_actions = sorted(actions, key=lambda item: item.text())
-                group_actions = self.add_group(sorted_actions, data.get("name"))
+            # Add the entry to map the group to its filter items.
+            self._filters_by_field[field_id] = filter_items
 
-                self._add_config_action(data.get("name"), field, group_actions)
-
-                for a in group_actions:
-                    a.setProperty("id", field)
-
-        else:
-            assert False, "Unsupported filter list data format"
+            # Sort the filter actions and add them to the menu.
+            sorted_actions = sorted(actions, key=lambda item: item.text())
+            group_actions = self.add_group(sorted_actions, data.get("name"))
+            # Add the group id as a property on the actions.
+            for action in group_actions:
+                action.setProperty("group_id", field_id)
 
         if self.actions():
             self.addSeparator()
             clear_action = self.addAction("Clear All Filters")
             clear_action.triggered.connect(self.clear_filters)
 
-            self.addMenu(self._config_menu)
+        # Build and add the configuration menu as a submenu to the main filter menu.
+        config_menu = self._build_config_menu(filters_def)
+        self.addMenu(config_menu)
 
-            # TODO allow the menu to "undock" from the button and show as its own widget
-            # this isn't as simple as setting the parent to None for QMenu
-            # popout_action = self.addAction("Pop Out Menu")
-            # popout_action.triggered.connect(self.popout_menu)
-
+        # FIXME update this to restore menu actions checked from previous state.
         # Defaults to no filters active after rebuild
         self._active_filter = FilterItem(
             FilterItem.TYPE_GROUP, FilterItem.OP_AND, filters=[]
         )
-        self._build_filter()
 
-        # Clear it to clean up
-        actions_by_filter = None
-
-        # self.filters_changed.emit()
-
-    def _add_config_action(self, name, field, group_actions):
+    def _build_config_menu(self, filters_def):
         """
+        Build the configuration menu to add as a submenu to the main filter menu.
         """
 
-        config_action = QtGui.QWidgetAction(self._config_menu)
-        config_widget = FilterItemWidget.create(
-            {"id": field, "filter_type": FilterItem.TYPE_LIST, "display_name": name,}
-        )
-        config_action.setDefaultWidget(config_widget)
-        self._config_menu.addAction(config_action)
+        menu = ShotgunMenu(self)
+        menu.setTitle("More Filters")
 
-        config_widget.filter_item_checked.connect(
-            lambda state, a=config_widget: self.toggle_action_group_cb(a, state)
-        )
+        for field_id, data in filters_def.items():
+            filter_id = "{}.Config".format(field_id)
+            filter_widget = FilterItemWidget.create(
+                filter_id,
+                field_id,
+                {
+                    "filter_type": FilterItem.TYPE_LIST,
+                    "display_name": data.get("name"),
+                },
+            )
+            filter_widget.filter_item_checked.connect(self.toggle_action_group_cb)
 
-        # FIXME this shows nothing if not sg fields
-        # config_action.setChecked(
-        # not self._visible_fields
-        # or field in self._visible_fields
-        # )
-        config_widget.action_triggered(
-            not self._visible_fields or field in self._visible_fields
-        )
+            checked = not self._visible_fields or field_id in self._visible_fields
+            filter_widget.action_triggered(checked)
 
-        # Should we not even add it in the first place if its not visible?
-        self.toggle_action_group(config_widget, group_actions)
-        # self.toggle_action_group(config_action, group_actions)
-        # config_action.triggered.connect(self.toggle_action_group_cb)
+            action = QtGui.QWidgetAction(menu)
+            action.setDefaultWidget(filter_widget)
+            menu.addAction(action)
 
-    def refresh_menu(self, filters):
+        return menu
+
+    def refresh_menu(self, updated_filters):
         """
         Do not rebuild the whole menu, just update it.
         """
 
-        for field, filter_list in filters.items():
-            if not filter_list.get("values"):
-                continue
+        # TODO this does not append any new filters that appear in updated_filters, if any. This
+        # simply updates the existing filters.
 
-            for filter_name, filter_value in filter_list.get("values").items():
-                filter_id = "{field}.{value_name}".format(
-                    field=field, value_name=filter_name
-                )
-                action = self._actions_by_filter.get(filter_id)
-                if action:
-                    action.defaultWidget().update_widget(filter_value)
+        for field_id, filter_items in self._filters_by_field.items():
+            for item in filter_items:
+                action = self._actions_by_filter[item.id]
 
-        for field, field_filters in self._filters_by_field.items():
-            for filter_item, action in field_filters:
                 name = action.defaultWidget().name()
-                if not filters.get(field, {}).get("values", {}).get(name):
-                    # action.setVisible(False)
+                filter_value = (
+                    updated_filters.get(field_id, {}).get("values", {}).get(name)
+                )
+                if filter_value:
+                    action.defaultWidget().update_widget(filter_value)
+                else:
+                    # TODO hide items if count is 0 - toggling the visibilty conflicts with the
+                    # visible fields, so would need to ensure not showing actions that should be
+                    # hidden even if their count is more than 0
                     action.defaultWidget().update_widget({"count": 0})
 
     def clear_menu(self):
         """
+        Reset and clear the menu.
         """
 
-        self._group_filters = []
         self._actions_by_filter = {}
         self._filters_by_field = {}
-        self._config_menu.clear()
+
         self.clear()
 
-    # def toggle_action_group_cb(self, *args, **kwargs):
-    def toggle_action_group_cb(self, widget, state):
-        # action = self.sender()
-        # checked = action.isChecked()
-        checked = widget.has_value()
-        actions = self.actions()
-        for a in actions:
-            # FIXME the action text is not guaranteed to be unique?
-            # p = a.property("id")
-            # t = action.text()
-            # if p == t:
-            if widget._id == a.property("id"):
-                try:
-                    a.defaultWidget().setVisible(checked)
-                except:
-                    # No worries
-                    pass
-                a.setVisible(checked)
-
-    # def toggle_action_group(self, action, actions):
-    def toggle_action_group(self, widget, actions):
-        checked = widget.has_value()
-        for a in actions:
-            try:
-                a.defaultWidget().setVisible(checked)
-            except:
-                # No worries
-                pass
-            a.setVisible(checked)
-
-    def create_filter_item_and_action(self, filter_data):
+    def clear_filters(self):
         """
+        Reset the filter values.
         """
 
-        filter_item = FilterItem.create(filter_data)
+        for filter_items in self._filters_by_field.values():
+            for item in filter_items:
+                action = self._actions_by_filter[item.id]
+                action.setChecked(False)
+                action.defaultWidget().clear_value()
+
+        self._active_filter.filters = []
+        self.filters_changed.emit()
+
+    def _create_filter_item_and_action(self, filter_id, group_id, filter_data):
+        """
+        Create the FilterItem and FilterItemWidget obejcts for the given filter data.
+        """
+
+        filter_item = FilterItem.create(filter_data, filter_id)
 
         action = QtGui.QWidgetAction(self.parentWidget())
-        widget = FilterItemWidget.create(filter_data)
+        action.setProperty("filter_id", filter_id)
+
+        widget = FilterItemWidget.create(filter_id, group_id, filter_data)
         widget.filter_item_checked.connect(
-            lambda state, a=action: self._filter_item_changed(a, state)
+            lambda state, a=action: self._filter_item_checked(a, state)
         )
         widget.filter_item_text_changed.connect(
             lambda text, f=filter_item: self._filter_item_text_changed(f, text)
@@ -281,34 +285,41 @@ class FilterMenu(ShotgunMenu):
 
         return (filter_item, action)
 
-    @property
-    def active_filter(self):
-        """"""
-
-        return self._active_filter
-
-    @property
-    def has_filtering(self):
+    def toggle_action_group_cb(self, state):
         """
-        Return True if the menu has any active filtering.
+        Show or hide the actions corresponding to the widget that was toggled to show/hide filter groups.
         """
 
-        return bool(self._active_filter and self._active_filter.filters)
+        widget = self.sender()
+        checked = widget.has_value()
+        group_id = widget.group_id
 
-    def _filter_item_changed(self, action, state):
+        for action in self.actions():
+            action_group_id = action.property("group_id")
+            if group_id == action_group_id:
+                try:
+                    action.defaultWidget().setVisible(checked)
+                # except AttributeError:
+                except:
+                    pass
+                action.setVisible(checked)
+
+    def _filter_item_checked(self, action, state):
         """
+        Callback triggered when a FilterItemWidget filter_item_checked signal emitted.
         """
 
-        # action.setChecked(state == QtCore.Qt.Checked)
-        action.setChecked(action.defaultWidget().has_value())
+        action.setChecked(state == QtCore.Qt.Checked)
         self._build_filter()
         self.filters_changed.emit()
 
     def _filter_item_text_changed(self, filter_item, text):
         """
+        Callback triggered when a FilterItemWidget filter_item_text_changed signal emitted.
         """
 
         filter_item.filter_value = text
+
         # TODO support multiple values via comma separated list
         # filter_item.filter_value = text.split(",")
 
@@ -317,12 +328,10 @@ class FilterMenu(ShotgunMenu):
 
     def _filter_changed(self, filter_menu_item_widget):
         """
-        Callback on filter action triggered.
-
-        Rebuild the active filter.
+        Callback triggered when an action in the menu is triggered.
         """
 
-        # Update the filter widget which will then trigger a re-build of the filters and signal emitting
+        # Trigger the FilterItemWidget which will then trigger rebuilding the filter
         filter_menu_item_widget.action_triggered()
 
     def _build_filter(self):
@@ -330,20 +339,16 @@ class FilterMenu(ShotgunMenu):
 
         active_group_filters = []
 
-        for filters in self._group_filters:
+        for filter_items in self._filters_by_field.values():
             active_filters = [
-                filter_item
-                for filter_item, action in filters
-                if action.defaultWidget().has_value()
+                item
+                for item in filter_items
+                if self._actions_by_filter[item.id].defaultWidget().has_value()
             ]
             if active_filters:
                 active_group_filters.append(
-                    (
-                        FilterItem(
-                            FilterItem.TYPE_GROUP,
-                            FilterItem.OP_OR,
-                            filters=active_filters,
-                        )
+                    FilterItem(
+                        FilterItem.TYPE_GROUP, FilterItem.OP_OR, filters=active_filters,
                     )
                 )
 
@@ -355,14 +360,14 @@ class FilterMenu(ShotgunMenu):
 
         group_filter = []
 
-        for field, filters in self._filters_by_field.items():
-            if field == group_field:
+        for field_id, filter_items in self._filters_by_field.items():
+            if field_id == group_field:
                 continue
 
             active_filters = [
-                filter_item
-                for filter_item, filter_action in filters
-                if filter_action.defaultWidget().has_value()
+                item
+                for item in filter_items
+                if self._actions_by_filter[item.id].defaultWidget().has_value()
             ]
             if active_filters:
                 group_filter.append(
@@ -372,19 +377,6 @@ class FilterMenu(ShotgunMenu):
                 )
 
         return group_filter
-
-    def clear_filters(self):
-        """
-        """
-
-        for filters in self._group_filters:
-            for _, action in filters:
-                # FIXME block signals to avoid retriggering the filter model each time a filter item is cleared -- just do it once at the end
-                action.setChecked(False)
-                action.defaultWidget().clear_value()
-
-        self._active_filter.filters = []
-        self.filters_changed.emit()
 
 
 class ShotgunFilterMenu(FilterMenu):
@@ -403,6 +395,8 @@ class ShotgunFilterMenu(FilterMenu):
 
         self.entity_model = shotgun_model
         self.proxy_model = proxy_model
+        # FIXME
+        self.proxy_model.enable_caching(False)
 
         self.entity_model.data_refreshed.connect(self.rebuild)
         self.proxy_model.layoutChanged.connect(self.refresh)
@@ -423,9 +417,7 @@ class ShotgunFilterMenu(FilterMenu):
         """
 
         filters = self.get_entity_filters(proxy_filter=True)
-
         self.refresh_menu(filters)
-        # self.build_menu(filters)
 
     def rebuild(self):
         """
@@ -506,18 +498,18 @@ class ShotgunFilterMenu(FilterMenu):
         # Is it OK to assume this is a string?
         value = item.data(filter_role)
 
-        if filter_role in filter_data:
-            filter_data[filter_role]["values"].setdefault(value, {}).setdefault(
-                "count", 0
-            )
-            filter_data[filter_role]["values"][value]["count"] += 1
-            filter_data[filter_role]["values"][value]["value"] = value
+        if name in filter_data:
+            filter_data[name]["values"].setdefault(value, {}).setdefault("count", 0)
+            filter_data[name]["values"][value]["count"] += 1
+            filter_data[name]["values"][value]["value"] = value
 
         else:
-            filter_data[filter_role] = {
+            filter_data[name] = {
                 "name": name,
                 "type": FilterItem.TYPE_LIST,
                 "values": {value: {"value": value, "count": 1}},
+                # "data_func": lambda i, f=QtCore.Qt.DisplayRole: get_index_data(i, f),
+                "filter_role": filter_role,
             }
 
     def _add_sg_field_filter(
@@ -538,10 +530,13 @@ class ShotgunFilterMenu(FilterMenu):
                 # if sg_field not in fields or (self._visible_fields and sg_field not in self._visible_fields):
                 continue
 
+            sg_type = shotgun_globals.get_type_display_name(entity_type, project_id)
+            field_id = "{type}.{field}".format(type=sg_type, field=sg_field)
+
             if proxy_filter:
-                pfs = self._get_group_filter(sg_field)
+                pfs = self._get_group_filter(field_id)
                 if pfs:
-                    self.proxy_model._filter_items = self._get_group_filter(sg_field)
+                    self.proxy_model._filter_items = pfs
                     parent_idx = (
                         entity_item.parent().index()
                         if entity_item.parent()
@@ -562,7 +557,7 @@ class ShotgunFilterMenu(FilterMenu):
             field_display = shotgun_globals.get_field_display_name(
                 entity_type, sg_field, project_id
             )
-            field_id = sg_field
+            # field_id = sg_field
 
             if isinstance(value, list):
                 values_list = value
@@ -590,9 +585,12 @@ class ShotgunFilterMenu(FilterMenu):
                     filter_data[field_id]["values"][value_id]["value"] = filter_value
                 else:
                     filter_data[field_id] = {
+                        "field": sg_field,
+                        "field_type": sg_type,
                         "name": field_display,
                         "type": field_type,
                         "values": {value_id: {"value": filter_value, "count": 1}},
+                        "data_func": lambda i, f=sg_field: get_index_data(i, f),
                     }
 
                 # TODO icons?

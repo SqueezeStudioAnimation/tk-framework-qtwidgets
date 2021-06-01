@@ -73,6 +73,7 @@ class FilterItem(object):
         data_func=None,
         filter_value=None,
         filters=None,
+        filter_id=None,
     ):
         """
         Constructor
@@ -109,6 +110,9 @@ class FilterItem(object):
         :type filters: list<FilterItem>
         """
 
+        # TODO make filter_id mandatory
+        self._id = filter_id
+
         self.filter_type = filter_type
         self.filter_role = filter_role
         self.filter_value = filter_value
@@ -128,6 +132,14 @@ class FilterItem(object):
             self.TYPE_ENTITY: self.is_entity_valid,
             self.TYPE_MULTI_ENTITY: self.is_multi_entity_valid,
         }
+
+    @property
+    def id(self):
+        """
+        Get the id for this FilterItem.
+        """
+
+        return self._id
 
     @staticmethod
     def get_datetime_bucket(dt):
@@ -213,7 +225,7 @@ class FilterItem(object):
         return dt.strftime("%x")
 
     @classmethod
-    def create(cls, data):
+    def create(cls, data, filter_id=None):
         """
         Factory classmethod to create a new FilterItem object from the provided data.
 
@@ -231,7 +243,7 @@ class FilterItem(object):
 
         filter_role = data.get("filter_role")
         data_func = data.get("data_func")
-        if not (filter_role or data_func):
+        if filter_role is None and data_func is None:
             raise ValueError(
                 "Missing required key-value pairs to create FilterItem object"
             )
@@ -240,7 +252,13 @@ class FilterItem(object):
         filters = data.get("filters")
 
         return cls(
-            filter_type, filter_op, filter_role, data_func, filter_value, filters
+            filter_type,
+            filter_op,
+            filter_role,
+            data_func,
+            filter_value,
+            filters,
+            filter_id=filter_id,
         )
 
     @classmethod
@@ -280,10 +298,10 @@ class FilterItem(object):
         :return: The index data
         """
 
-        if self.filter_role:
+        if self.filter_role is not None:
             return index.data(self.filter_role)
 
-        if self.data_func:
+        if self.data_func and callable(self.data_func):
             return self.data_func(index)
 
         assert (
@@ -452,7 +470,8 @@ class FilterItem(object):
         Filter the incoming list of entities.
         """
 
-        # FIXME op?
+        entity_list = entity_list or []
+
         if self.filter_op == self.OP_EQUAL:
             for entity in entity_list:
                 if entity == self.filter_value:
