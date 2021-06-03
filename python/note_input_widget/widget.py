@@ -541,6 +541,9 @@ class NoteInputWidget(QtGui.QWidget):
                 "addressings_to": addressings_to,
                 "note_links": note_links,
                 "tasks": note_tasks,
+                # [SQUEEZE] Workaround that creates a note with the current user.
+                "created_by": current_user,
+                "user": current_user
             },
         )
 
