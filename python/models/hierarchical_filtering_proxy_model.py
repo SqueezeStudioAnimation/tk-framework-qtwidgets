@@ -13,7 +13,6 @@ Proxy model that provides efficient hierarhcical filtering of a tree-based sourc
 """
 import sgtk
 from sgtk.platform.qt import QtCore, QtGui
-from tank_vendor import six
 
 
 class HierarchicalFilteringProxyModel(QtGui.QSortFilterProxyModel):
@@ -142,7 +141,7 @@ class HierarchicalFilteringProxyModel(QtGui.QSortFilterProxyModel):
                 return
 
             self._cache = dict(
-                [(k, v) for k, v in six.iteritems(self._cache) if v[0].isValid()]
+                [(k, v) for k, v in self._cache.items() if v[0].isValid()]
             )
 
         def clear(self):
@@ -340,13 +339,19 @@ class HierarchicalFilteringProxyModel(QtGui.QSortFilterProxyModel):
         # if needed, disconnect from the previous source model:
         prev_source_model = self.sourceModel()
         if prev_source_model:
-            prev_source_model.rowsInserted.disconnect(
-                self._on_source_model_rows_inserted
-            )
-            prev_source_model.dataChanged.disconnect(self._on_source_model_data_changed)
-            prev_source_model.modelAboutToBeReset.disconnect(
-                self._on_source_model_about_to_be_reset
-            )
+            try:
+                prev_source_model.rowsInserted.disconnect(
+                    self._on_source_model_rows_inserted
+                )
+                prev_source_model.dataChanged.disconnect(
+                    self._on_source_model_data_changed
+                )
+                prev_source_model.modelAboutToBeReset.disconnect(
+                    self._on_source_model_about_to_be_reset
+                )
+            except RuntimeError:
+                app = sgtk.platform.current_bundle()
+                app.log_debug("Error running closeEvent()")
 
         # clear out the various caches:
         self._dirty_all_accepted()

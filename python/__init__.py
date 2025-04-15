@@ -9,6 +9,9 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 from . import utils
+from . import decorators
+from . import sg_qicons
+from . import sg_qwidgets
 from . import playback_label
 from . import views
 from . import models
@@ -27,5 +30,9 @@ from . import global_search_widget
 from . import screen_grab
 from . import shotgun_fields
 from . import shotgun_menus
+from . import shotgun_widget
 from . import version_details
 from . import context_selector
+from . import delegates
+from . import filtering
+from . import message_box

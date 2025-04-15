@@ -20,7 +20,7 @@ from .search_completer import SearchCompleter
 
 class GlobalSearchCompleter(SearchCompleter):
     """
-    A standalone :class:`PySide.QtGui.QCompleter` class for matching SG entities to typed text.
+    A standalone :class:`PySide.QtGui.QCompleter` class for matching PTR entities to typed text.
 
     :signal: ``entity_selected(str, int)`` - Provided for backward compatibility.
       ``entity_activated`` is emitted at the same time with an additional ``name``
@@ -49,7 +49,7 @@ class GlobalSearchCompleter(SearchCompleter):
         :param parent: Parent widget
         :type parent: :class:`~PySide.QtGui.QWidget`
         """
-        super(GlobalSearchCompleter, self).__init__(parent)
+        super().__init__(parent)
 
         # the default entity search criteria. The calling code can override these
         # criterial by calling ``set_searchable_entity_types``.

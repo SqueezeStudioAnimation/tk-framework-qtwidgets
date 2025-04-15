@@ -67,7 +67,7 @@ class ShotgunFieldDelegateGeneric(views.WidgetDelegate):
             one will be created when the delegate widget is created.
         :type bg_task_manager: :class:`~task_manager.BackgroundTaskManager`
 
-        :param int field_data_role: The data role that stores SG field data in
+        :param int field_data_role: The data role that stores PTR field data in
             the model where this delegate is to be used.
         """
         views.WidgetDelegate.__init__(self, view)
@@ -99,9 +99,7 @@ class ShotgunFieldDelegateGeneric(views.WidgetDelegate):
         """
 
         # let the base class do all the heavy lifting
-        super(ShotgunFieldDelegateGeneric, self).paint(
-            painter, style_options, model_index
-        )
+        super().paint(painter, style_options, model_index)
 
         # clear out the paint widget's contents to prevent it from showing in
         # other places in the view (since the widget is shared)
@@ -250,7 +248,7 @@ class ShotgunFieldDelegateGeneric(views.WidgetDelegate):
 
         :param editor: The editor widget.
         :type editor: :class:`~PySide.QtGui.QWidget`
-        :param model: The SG model where the data lives.
+        :param model: The PTR model where the data lives.
         :type model: :class:`~PySide.QtCore.QAbstractItemModel`
         :param index: The index of the model to be edited.
         :type index: :class:`~PySide.QtCore.QModelIndex`
@@ -286,7 +284,7 @@ class ShotgunFieldDelegateGeneric(views.WidgetDelegate):
         :param event: The event that occurred.
         :type event: :class:`~PySide.QtCore.QEvent`
 
-        :param model: The SG model where the data lives.
+        :param model: The PTR model where the data lives.
         :type model: :class:`~PySide.QtCore.QAbstractItemModel`
 
         :param option: Options for rendering the item.
@@ -421,7 +419,7 @@ class ShotgunFieldDelegate(ShotgunFieldDelegateGeneric):
 
         field_data_role = shotgun_model.ShotgunModel.SG_ASSOCIATED_FIELD_ROLE
 
-        super(ShotgunFieldDelegate, self).__init__(
+        super().__init__(
             sg_entity_type,
             field_name,
             display_class,
@@ -438,7 +436,7 @@ class ShotgunFieldDelegate(ShotgunFieldDelegateGeneric):
 
         :param editor: The editor widget.
         :type editor: :class:`~PySide.QtGui.QWidget`
-        :param model: The SG model where the data lives.
+        :param model: The PTR model where the data lives.
         :type model: :class:`~PySide.QtCore.QAbstractItemModel`
         :param index: The index of the model to be edited.
         :type index: :class:`~PySide.QtCore.QModelIndex`
@@ -457,7 +455,7 @@ class ShotgunFieldDelegate(ShotgunFieldDelegateGeneric):
 
         bundle = sgtk.platform.current_bundle()
 
-        # special case for image fields in the ShotgunModel. The SG model stores
+        # special case for image fields in the ShotgunModel. The PTR model stores
         # the image field in the first column. If the value has changed, set the
         # icon value there.
         if editor.get_field_name() == "image":
@@ -497,9 +495,9 @@ class ShotgunFieldDelegate(ShotgunFieldDelegateGeneric):
             # invalid index, do nothing
             return
 
-        # special case for image fields in the ShotgunModel. The SG model has
+        # special case for image fields in the ShotgunModel. The PTR model has
         # the ability to pre-query thumbnails for entities for efficiency. If
-        # this is the image field for an entity in the SG model, we can make use
+        # this is the image field for an entity in the PTR model, we can make use
         # of the potentially pre-queried image available in the first column.
         if widget.get_field_name() == "image":
             primary_item = src_index.model().item(src_index.row(), 0)

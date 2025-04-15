@@ -99,7 +99,7 @@ class VersionDetailsWidget(QtGui.QWidget):
         :param bg_task_manager: A :class:`~BackgroundTaskManager` object.
         :param entity:          A Shotgun Version entity dictionary.
         """
-        super(VersionDetailsWidget, self).__init__(parent)
+        super().__init__(parent)
 
         self._current_entity = None
         self._pinned = False
@@ -720,8 +720,10 @@ class VersionDetailsWidget(QtGui.QWidget):
         qss_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "style.qss")
         try:
             f = open(qss_file, "rt")
-            qss_data = sgtk.platform.current_bundle().engine._resolve_sg_stylesheet_tokens(
-                f.read()
+            qss_data = (
+                sgtk.platform.current_bundle().engine._resolve_sg_stylesheet_tokens(
+                    f.read()
+                )
             )
             self.setStyleSheet(qss_data)
         finally:
@@ -845,10 +847,10 @@ class VersionDetailsWidget(QtGui.QWidget):
         #      just in case someone tries to click before the cache is loaded
 
         self.ui.more_fields_button.setEnabled(False)
-        self.ui.more_fields_button.setToolTip("Caching SG fields. Please hold...")
+        self.ui.more_fields_button.setToolTip("Caching PTR fields. Please hold...")
 
         self.ui.version_fields_button.setEnabled(False)
-        self.ui.version_fields_button.setToolTip("Caching SG fields. Please hold...")
+        self.ui.version_fields_button.setToolTip("Caching PTR fields. Please hold...")
 
         # use the current entity to retrieve the project id to ensure is cached
         entity = self._current_entity or {}

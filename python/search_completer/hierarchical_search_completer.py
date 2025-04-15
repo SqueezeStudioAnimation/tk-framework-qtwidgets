@@ -20,7 +20,7 @@ shotgun_model = sgtk.platform.import_framework(
 
 class HierarchicalSearchCompleter(SearchCompleter):
     """
-    A standalone :class:`PySide.QtGui.QCompleter` class for matching SG entities to typed text.
+    A standalone :class:`PySide.QtGui.QCompleter` class for matching PTR entities to typed text.
 
     If defaults to searching inside the current context's project and to only show entities.
 
@@ -46,7 +46,7 @@ class HierarchicalSearchCompleter(SearchCompleter):
         :param parent: Parent widget
         :type parent: :class:`~PySide.QtGui.QWidget`
         """
-        super(HierarchicalSearchCompleter, self).__init__(parent)
+        super().__init__(parent)
         self.search_root = self._bundle.context.project
         self.show_entities_only = True
         self.seed_entity_field = "PublishedFile.entity"

@@ -26,7 +26,7 @@ shotgun_menus = sgtk.platform.current_bundle().import_module("shotgun_menus")
 logger = sgtk.platform.get_logger(__name__)
 
 # fields required to create a context from a task entity without falling back to
-# a SG query
+# a PTR query
 TASK_QUERY_FIELDS = ["type", "id", "content", "project", "entity", "step"]
 
 
@@ -48,7 +48,7 @@ class ContextWidget(QtGui.QWidget):
         :param parent: The model parent.
         :type parent: :class:`~PySide.QtGui.QObject`
         """
-        super(ContextWidget, self).__init__(parent)
+        super().__init__(parent)
 
         self._bundle = sgtk.platform.current_bundle()
         project = self._bundle.context.project
@@ -629,6 +629,13 @@ class ContextWidget(QtGui.QWidget):
         """
         bundle = sgtk.platform.current_bundle()
         context = bundle.sgtk.context_from_entity(entity_type, entity_id)
+
+        # Ensure the entity name is set within in the context. In some cases, e.g. for custom
+        # entities, the context retrieved does not have the entity name. We have the entity
+        # name here, so just set it.
+        if "name" not in context.entity and entity_name:
+            context.entity["name"] = entity_name
+
         self._on_context_activated(context)
 
     def _on_task_search_toggled(self, checked):
@@ -967,7 +974,7 @@ def _get_context_icon_path(context):
 
 def _query_my_tasks():
     """
-    Called via bg task to query SG for tasks assigned to the current user.
+    Called via bg task to query PTR for tasks assigned to the current user.
     """
 
     bundle = sgtk.platform.current_bundle()
@@ -1002,7 +1009,7 @@ def _query_my_tasks():
 
 def _query_entity_schema(entity_type, field_name):
     """
-    Called as bg task to query SG for the field schema
+    Called as bg task to query PTR for the field schema
     for the given type and field.
 
     :param str entity_type: Entity type to query schema for

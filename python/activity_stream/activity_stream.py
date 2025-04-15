@@ -28,7 +28,6 @@ note_input_widget = sgtk.platform.current_bundle().import_module("note_input_wid
 shotgun_globals = sgtk.platform.import_framework(
     "tk-framework-shotgunutils", "shotgun_globals"
 )
-utils = sgtk.platform.import_framework("tk-framework-shotgunutils", "utils")
 
 
 class ActivityStreamWidget(QtGui.QWidget):
@@ -716,16 +715,7 @@ class ActivityStreamWidget(QtGui.QWidget):
         """
         Clear the widget. This will remove all items the UI
         """
-        is_qt4 = QtCore.__version__.startswith("4.")
-
         self._bundle.log_debug("Clearing UI...")
-        # before we begin widget operations, turn off visibility
-        # of the whole widget in order to avoid recomputes
-        #
-        # NOTE: For some reason this causes a crash when in a PySide2
-        # environment. We'll only do it if we're in Qt4 as a result.
-        if is_qt4:
-            self.setVisible(False)
 
         # scroll to top
         self.ui.activity_stream_scroll_area.verticalScrollBar().setValue(0)
@@ -740,7 +730,6 @@ class ActivityStreamWidget(QtGui.QWidget):
                 self.ui.activity_stream_layout.removeWidget(x)
                 # set it's parent to None so that it is removed from the widget hierarchy
                 x.setParent(None)
-                utils.safe_delete_later(x)
 
             self._bundle.log_debug("Clearing python data structures")
             self._activity_stream_data_widgets = {}
@@ -749,17 +738,11 @@ class ActivityStreamWidget(QtGui.QWidget):
             for w in self._activity_stream_static_widgets:
                 self.ui.activity_stream_layout.removeWidget(w)
                 w.setParent(None)
-                utils.safe_delete_later(w)
 
             self._activity_stream_static_widgets = []
 
         finally:
             # make the window visible again and trigger a redraw
-            #
-            # NOTE: For some reason this causes a crash when in a PySide2
-            # environment. We'll only do it if we're in Qt4 as a result.
-            if is_qt4:
-                self.setVisible(True)
 
             # Since we have no entity loaded, we don't need to show
             # the note widget.
@@ -775,7 +758,6 @@ class ActivityStreamWidget(QtGui.QWidget):
             self._bundle.log_debug("Clearing the loading widget")
             self.ui.activity_stream_layout.removeWidget(self._loading_widget)
             self._loading_widget.setParent(None)
-            utils.safe_delete_later(self._loading_widget)
             self._loading_widget = None
             self._bundle.log_debug("...done")
 
@@ -873,26 +855,31 @@ class ActivityStreamWidget(QtGui.QWidget):
                 widget.interactive = self.version_items_playable
 
             elif data["primary_entity"]["type"] == "Note":
-                # new note
-                widget = NoteWidget(data["primary_entity"]["id"], self)
-                widget.show_note_links = self.show_note_links
-                widget.attachments_filter = self.attachments_filter
+                # Ensure that the user has permission to see script user
+                # (if not, data["primary_entity"]["user"] will be None)
+                if data["primary_entity"]["user"]:
+                    # new note
+                    widget = NoteWidget(data["primary_entity"]["id"], self)
+                    widget.show_note_links = self.show_note_links
+                    widget.attachments_filter = self.attachments_filter
 
-                # If it's been requested that we select this Note entity's widget when it's
-                # constructed, then we do so here. This is the situation where the user has
-                # created a new Note, which upon completion we want to have autoselected.
-                if data["primary_entity"]["id"] == self._select_on_arrival.get("id"):
-                    # First we need to deselect whatever is selected, because we're going
-                    # to be selecting our new widget right after.
-                    for w in self._activity_stream_data_widgets.values():
-                        if isinstance(w, NoteWidget):
-                            if w.selected:
-                                w.set_selected(False)
-                                self._note_selected_changed(False, w.note_id)
+                    # If it's been requested that we select this Note entity's widget when it's
+                    # constructed, then we do so here. This is the situation where the user has
+                    # created a new Note, which upon completion we want to have autoselected.
+                    if data["primary_entity"]["id"] == self._select_on_arrival.get(
+                        "id"
+                    ):
+                        # First we need to deselect whatever is selected, because we're going
+                        # to be selecting our new widget right after.
+                        for w in self._activity_stream_data_widgets.values():
+                            if isinstance(w, NoteWidget):
+                                if w.selected:
+                                    w.set_selected(False)
+                                    self._note_selected_changed(False, w.note_id)
 
-                    widget.set_selected(True)
-                    self._note_selected_changed(True, widget.note_id)
-                    self._select_on_arrival = dict()
+                        widget.set_selected(True)
+                        self._note_selected_changed(True, widget.note_id)
+                        self._select_on_arrival = dict()
 
             else:
                 # minimalistic 'new' widget for all other cases

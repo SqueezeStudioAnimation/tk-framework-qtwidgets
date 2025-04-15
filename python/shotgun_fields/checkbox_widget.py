@@ -9,12 +9,10 @@
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
 from sgtk.platform.qt import QtCore, QtGui
-from tank_vendor import six
 from .shotgun_field_meta import ShotgunFieldMeta
 
 
-@six.add_metaclass(ShotgunFieldMeta)
-class CheckBoxWidget(QtGui.QCheckBox):
+class CheckBoxWidget(QtGui.QCheckBox, metaclass=ShotgunFieldMeta):
     """
     Displays a ``checkbox`` field value as returned by the Shotgun API.
     """
@@ -66,6 +64,12 @@ class CheckBoxWidget(QtGui.QCheckBox):
 
         :param int state: Qt enum for check/unchecked
         """
+        if not isinstance(state, QtCore.Qt.CheckState):
+            # Pyside6 docs says `state` is still an int.
+            # https://doc.qt.io/qtforpython-6.5/PySide6/QtWidgets/QCheckBox.html
+            # However, it seems they're migrating to use Enums everywhere.
+            # Let's convert use the value to create a QtCore.Qt.CheckState enum.
+            state = QtCore.Qt.CheckState(state)
 
         new_value = state == QtCore.Qt.Checked
         if self._value != new_value:

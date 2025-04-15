@@ -10,15 +10,19 @@
 
 from sgtk.platform.qt import QtCore, QtGui
 
-import sgtk
 import copy
-import time
-import os
-import sys
-from tank_vendor import six
 import datetime
-import sqlite3
 import hashlib
+import sgtk
+import sqlite3
+import sys
+import os
+import time
+
+try:
+    from tank_vendor import sgutils
+except ImportError:
+    from tank_vendor import six as sgutils
 
 shotgun_model = sgtk.platform.import_framework(
     "tk-framework-shotgunutils", "shotgun_model"
@@ -718,7 +722,7 @@ class ActivityStreamDataHandler(QtCore.QObject):
             for event in events:
                 activity_id = event["id"]
                 payload = sgtk.util.pickle.dumps(event)
-                blob = sqlite3.Binary(six.ensure_binary(payload))
+                blob = sqlite3.Binary(sgutils.ensure_binary(payload))
 
                 # first insert event
                 if self._force_activity_stream_update:
@@ -793,7 +797,7 @@ class ActivityStreamDataHandler(QtCore.QObject):
 
             # first pickle the note data
             payload = sgtk.util.pickle.dumps(data)
-            blob = sqlite3.Binary(six.ensure_binary(payload))
+            blob = sqlite3.Binary(sgutils.ensure_binary(payload))
 
             # first delete any existing record
             cursor.execute("DELETE FROM note where note_id = ?", (note_id,))
@@ -915,18 +919,21 @@ class ActivityStreamDataHandler(QtCore.QObject):
 
         if self._processing_id == uid:
             self._bundle.log_warning(
-                "Could not retrieve activity stream " "data from ShotGrid: %s" % msg
+                "Could not retrieve activity stream "
+                "data from Flow Production Tracking: %s" % msg
             )
 
         if uid in self._note_map:
             self._bundle.log_warning(
-                "Could not retrieve note " "data from ShotGrid: %s" % msg
+                "Could not retrieve note "
+                "data from Flow Production Tracking: %s" % msg
             )
 
         if uid in self._thumb_map:
             # one of the jobs we are tracking
             self._bundle.log_warning(
-                "Could not retrieve thumbnail " "data from ShotGrid: %s" % msg
+                "Could not retrieve thumbnail "
+                "data from Flow Production Tracking: %s" % msg
             )
 
     def __convert_timestamp_r(self, data):
@@ -945,7 +952,7 @@ class ActivityStreamDataHandler(QtCore.QObject):
 
         elif isinstance(data, dict):
             new_val = {}
-            for (k, v) in data.items():
+            for k, v in data.items():
                 new_val[k] = self.__convert_timestamp_r(v)
             return new_val
 

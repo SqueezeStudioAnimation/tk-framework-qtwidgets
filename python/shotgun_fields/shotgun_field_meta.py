@@ -58,17 +58,15 @@ class ShotgunFieldMeta(type(QtGui.QWidget)):
 
     Example::
 
-        @six.add_metaclass(ShotgunFieldMeta)
-        class FloatDisplayWidget(QtGui.QLabel):
+        class FloatDisplayWidget(QtGui.QLabel, metaclass=ShotgunFieldMeta):
             _DISPLAY_TYPE = "float"
             # ...
 
-        @six.add_metaclass(ShotgunFieldMeta)
-        class FloatEditorWidget(QtGui.QDoubleSpinBox):
+        class FloatEditorWidget(QtGui.QDoubleSpinBox, metaclass=ShotgunFieldMeta):
             _EDITOR_TYPE = "float"
             # ...
 
-    The widgets shown above will be used by any SG field for the specified type.
+    The widgets shown above will be used by any PTR field for the specified type.
     It is also possible to register widgets that are used only for specific
     fields on specific entities. To achieve this, use the ``_ENTITY_FIELDS``
     class member to define a list of tuples that explicitly defined the entity
@@ -76,8 +74,7 @@ class ShotgunFieldMeta(type(QtGui.QWidget)):
 
     Example::
 
-        @six.add_metaclass(ShotgunFieldMeta)
-        class SpecialFloatDisplayWidget(QtGui.QLabel):
+        class SpecialFloatDisplayWidget(QtGui.QLabel, metaclass=ShotgunFieldMeta):
             _DISPLAY_TYPE = "float"
             _ENTITY_FIELDS = [
                 ("CustomEntity07", "my_float_field"),
@@ -191,13 +188,13 @@ class ShotgunFieldMeta(type(QtGui.QWidget)):
             registration_types.append((field_type, widget_type))
 
         # register all the types for this widget class
-        for (field_type, widget_type) in registration_types:
+        for field_type, widget_type in registration_types:
 
             if "_ENTITY_FIELDS" in class_dict:
                 # this is an override widget, meaning it is to be used for specific
                 # entity+field combinations. Loop through those combinations and
                 # register this class for each.
-                for (entity_type, field_name) in class_dict["_ENTITY_FIELDS"]:
+                for entity_type, field_name in class_dict["_ENTITY_FIELDS"]:
                     ShotgunFieldManager.register_entity_field_class(
                         entity_type, field_name, field_class, widget_type
                     )
@@ -241,7 +238,7 @@ class ShotgunFieldMeta(type(QtGui.QWidget)):
         class' superclass.
         """
         # create the instance passing through just the QWidget compatible arguments
-        instance = super(ShotgunFieldMeta, cls).__call__(parent=parent, **kwargs)
+        instance = super().__call__(parent=parent, **kwargs)
 
         # set the default member variables
         instance._value = None

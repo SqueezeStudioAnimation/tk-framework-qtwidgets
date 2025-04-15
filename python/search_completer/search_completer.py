@@ -23,7 +23,7 @@ from .utils import create_rectangular_thumbnail, CompleterPixmaps
 
 class SearchCompleter(QtGui.QCompleter):
     """
-    A standalone :class:`PySide.QtGui.QCompleter` class for matching SG entities to typed text.
+    A standalone :class:`PySide.QtGui.QCompleter` class for matching PTR entities to typed text.
 
     :modes: ``MODE_LOADING, MODE_NOT_FOUND, MODE_RESULT`` - Used to identify the
         mode of an item in the completion list
@@ -57,7 +57,7 @@ class SearchCompleter(QtGui.QCompleter):
         :type parent: :class:`~PySide.QtGui.QWidget`
         """
 
-        super(SearchCompleter, self).__init__(parent)
+        super().__init__(parent)
 
         self._pixmaps = CompleterPixmaps()
 

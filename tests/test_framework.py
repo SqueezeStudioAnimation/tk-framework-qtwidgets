@@ -15,8 +15,19 @@ import inspect
 from tank_test.tank_test_base import TankTestBase
 from tank_test.tank_test_base import setUpModule  # noqa
 
-from tank_vendor import six
 import sgtk
+
+try:
+    from sgtk.platform.qt import QtCore, QtGui
+except:
+    # components also use PySide, so make sure we have this loaded up correctly
+    # before starting auto-doc.
+    from tank.util.qt_importer import QtImporter
+
+    importer = QtImporter()
+    sgtk.platform.qt.QtCore = importer.QtCore
+    sgtk.platform.qt.QtGui = importer.QtGui
+    from sgtk.platform.qt import QtCore, QtGui
 
 
 class TestFramework(TankTestBase):
@@ -28,12 +39,13 @@ class TestFramework(TankTestBase):
         """
         Prepare a configuration with a config that uses the framework.
         """
-        super(TestFramework, self).setUp()
+        super().setUp()
         self.setup_fixtures()
         context = sgtk.Context(self.tk, project=self.project)
         self.engine = sgtk.platform.start_engine("tk-testengine", self.tk, context)
-        self._app = sgtk.platform.qt.QtGui.QApplication.instance() or sgtk.platform.qt.QtGui.QApplication(
-            []
+        self._app = (
+            sgtk.platform.qt.QtGui.QApplication.instance()
+            or sgtk.platform.qt.QtGui.QApplication([])
         )
 
     def tearDown(self):
@@ -41,7 +53,7 @@ class TestFramework(TankTestBase):
         Terminate the engine and the rest of the test suite.
         """
         self.engine.destroy()
-        super(TestFramework, self).tearDown()
+        super().tearDown()
 
     def test_import_framework(self):
         """
@@ -61,7 +73,7 @@ class TestFramework(TankTestBase):
         In lieu of a proper test suite that fully tests the widgets, we'll at least
         instantiate all the widgets in a tight loop.
 
-        Careful, there be dragons.
+        Careful, there be dragons (that cause this test to fail randomly).
         """
 
         # We can't load modules from a test because load_framework can only be called
@@ -121,32 +133,58 @@ class TestFramework(TankTestBase):
                     continue
 
                 params = {}
-                if six.PY2:
-                    getargspec = inspect.getargspec
-                else:
-                    getargspec = inspect.getfullargspec
+
+                try:
+                    spec = inspect.getfullargspec(attr.__init__)
+                except TypeError as error:
+                    # Failed to get the spec for the __init__ method, raise the error
+                    raise error
+
                 # Look at the parameter list for this widget's __init__ method
-                for arg in getargspec(attr.__init__).args:
+                spec_args = spec.args
+                for arg in spec_args:
                     # For each required parameter, we'll pass in an instance
                     # of the right type.
                     if arg == "parent":
                         params["parent"] = parent
+
                     elif arg == "sg_model":
                         params["sg_model"] = shotgun_model.ShotgunModel(
                             parent=self._app, bg_task_manager=bg_task_manager
                         )
+
                     elif arg == "bg_task_manager":
                         params["bg_task_manager"] = bg_task_manager
+
                     elif arg == "fields_manager":
                         params["fields_manager"] = field_manager.ShotgunFieldManager(
                             parent=parent, bg_task_manager=bg_task_manager
                         )
+
                     elif arg == "sg_entity_type":
                         params["sg_entity_type"] = "Asset"
 
-                # Add the widget and show it, don't worry about the rest.
-                # It. Just. Works.
-                attr(**params).show()
+                    elif arg == "filter_data":
+                        # FilterItemWidget
+                        params[arg] = {"display_name": "Name"}
+
+                    elif arg in ("filter_id", "group_id"):
+                        # FilterItemWidget
+                        params[arg] = "id"
+
+                    elif arg == "splitter_parent":
+                        # SGQSplitterHandle
+                        params[arg] = QtGui.QSplitter(parent)
+
+                    elif arg == "orientation":
+                        # SGQSplitterHandle
+                        params[arg] = QtCore.Qt.Orientation.Horizontal
+
+                # Finally create the widget, no need to show it.
+                widget = attr(**params)
+                assert widget
+                # Clean it up right away as it is no longer needed
+                widget.destroy()
 
         self._app.processEvents()
         parent.destroy()

@@ -88,6 +88,9 @@ class NoteInputWidget(QtGui.QWidget):
         self._attachments = []
         self._cleanup_after_upload = []
 
+        # initialize remove attachments button
+        self._on_attachment_selection_changed()
+
         # set up an overlay that spins when note is submitted
         self.__overlay = SmallOverlayWidget(self)
 
@@ -104,6 +107,9 @@ class NoteInputWidget(QtGui.QWidget):
         self.ui.close_attachments.clicked.connect(self._cancel_attachments)
         self.ui.add_button.clicked.connect(self._add_attachments)
         self.ui.remove_button.clicked.connect(self._remove_selected_attachments)
+        self.ui.attachment_list_tree.itemSelectionChanged.connect(
+            self._on_attachment_selection_changed
+        )
 
         # reset state of the UI
         self.pre_submit_callback = None
@@ -263,7 +269,6 @@ class NoteInputWidget(QtGui.QWidget):
             self.pre_submit_callback(self)
 
         # hide hint label for better ux.
-        self.ui.hint_label.hide()
         self.__overlay.start_spin()
 
         # get all publish details from the UI
@@ -552,12 +557,25 @@ class NoteInputWidget(QtGui.QWidget):
 
         return sg_note_data
 
+    def _on_attachment_selection_changed(self):
+        """Slot triggered when the attachment list selection changes."""
+
+        selected_items = self.ui.attachment_list_tree.selectedItems()
+        has_selection = len(selected_items) > 0
+        self.ui.remove_button.setEnabled(has_selection)
+        if has_selection:
+            self.ui.remove_button.setToolTip("Remove selected attachments")
+        else:
+            self.ui.remove_button.setToolTip(
+                "Select an attachment from the list to enable this button"
+            )
+
     def __upload_attachments(self, parent_entity, sg, data):
         """
         Uploads any generic file attachments to Shotgun, parenting
         them to the Note entity.
 
-        :param parent_entity:   The Note entity to attach the files to in SG.
+        :param parent_entity:   The Note entity to attach the files to in PTR.
         :param sg:              A Shotgun API handle.
         :param data:            The data dict containing an "attachments" key
                                 housing a list of file paths to attach.
@@ -575,8 +593,8 @@ class NoteInputWidget(QtGui.QWidget):
         Uploads any generic file attachments to Shotgun, parenting
         them to the Note entity.
 
-        :param file_path:       The path to the file to upload to SG.
-        :param parent_entity:   The Note entity to attach the files to in SG.
+        :param file_path:       The path to the file to upload to PTR.
+        :param parent_entity:   The Note entity to attach the files to in PTR.
         :param sg:              A Shotgun API handle.
         """
         self._bundle.log_debug(
@@ -767,7 +785,6 @@ class NoteInputWidget(QtGui.QWidget):
         where a user can type in stuff
         """
         self.ui.stacked_widget.setCurrentIndex(self._EDITOR_WIDGET_INDEX)
-        self.ui.hint_label.show()
         self._adjust_ui()
         self.ui.text_entry.setFocus()
 
@@ -819,7 +836,6 @@ class NoteInputWidget(QtGui.QWidget):
 
         # make sure the screenshot button shows the camera icon
         self.ui.thumbnail.hide()
-        self.ui.hint_label.hide()
         self.ui.screenshot.setIcon(self._camera_icon)
         self.ui.screenshot.setToolTip("Take Screenshot")
 

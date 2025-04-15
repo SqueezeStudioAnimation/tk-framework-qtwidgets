@@ -8,15 +8,11 @@
 # agreement to the Shotgun Pipeline Toolkit Source Code License. All rights
 # not expressly granted therein are reserved by Shotgun Software Inc.
 
-from __future__ import with_statement
-
 import sgtk
 from sgtk.platform.qt import QtCore, QtGui
 from .ui.card_widget import Ui_ShotgunEntityCardWidget
 
 import threading
-
-utils = sgtk.platform.import_framework("tk-framework-shotgunutils", "utils")
 
 
 class ShotgunEntityCardWidget(QtGui.QWidget):
@@ -38,7 +34,7 @@ class ShotgunEntityCardWidget(QtGui.QWidget):
                                       the widget will not construct field widgets until one
                                       is set later via the field_manager property.
         """
-        super(ShotgunEntityCardWidget, self).__init__(parent)
+        super().__init__(parent)
 
         self.ui = Ui_ShotgunEntityCardWidget()
         self.ui.setupUi(self)
@@ -188,7 +184,6 @@ class ShotgunEntityCardWidget(QtGui.QWidget):
         field_widget.hide()
         self.ui.field_grid_layout.removeWidget(field_widget)
         field_widget.setParent(None)
-        utils.safe_delete_later(field_widget)
 
         # If there's a label, then also remove that.
         field_label = self._fields[field_name]["label"]
@@ -197,7 +192,6 @@ class ShotgunEntityCardWidget(QtGui.QWidget):
             field_label.hide()
             self.ui.field_grid_layout.removeWidget(field_label)
             field_label.setParent(None)
-            utils.safe_delete_later(field_label)
 
         self.ui.field_grid_layout.setRowMinimumHeight(
             self._fields[field_name]["row"], 0
@@ -563,7 +557,7 @@ class _OrderedDict(object):
         self._keys = []
         self._dict = dict()
 
-        for (key, value) in kwargs.items():
+        for key, value in kwargs.items():
             self.__setitem__(key, value)
 
     def get(self, key, default=None):

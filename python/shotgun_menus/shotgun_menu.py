@@ -47,7 +47,7 @@ class ShotgunMenu(QtGui.QMenu):
         :type parent: :class:`~PySide.QtGui.QWidget`
         """
 
-        super(ShotgunMenu, self).__init__(parent)
+        super().__init__(parent)
 
         self._typed_text = ""
 
@@ -59,7 +59,7 @@ class ShotgunMenu(QtGui.QMenu):
         self._type_timer.setInterval(1000)
         self._type_timer.timeout.connect(self._on_type_timer_timeout)
 
-        # styling to resemble SG web menus
+        # styling to resemble PTR web menus
         self.setStyleSheet(
             """
             QMenu {
@@ -102,6 +102,16 @@ class ShotgunMenu(QtGui.QMenu):
             }
             """
         )
+
+    @staticmethod
+    def get_label(title):
+        """Create the label widget to add to the menu."""
+
+        label = QtGui.QLabel()
+        label.setStyleSheet("margin: 0.4em; color: gray;")
+        font_style = "text-transform: uppercase;"
+        label.setText("<font style='%s'>%s</font>" % (font_style, title))
+        return label
 
     def add_group(self, items, title=None, separator=True, exclusive=False):
         """
@@ -158,13 +168,9 @@ class ShotgunMenu(QtGui.QMenu):
 
         :param str title: The title of the sectional label
         """
-        # build the label widget
-        label = QtGui.QLabel(self)
-        label.setStyleSheet("margin: 0.4em; color: gray;")
-        font_style = "text-transform: uppercase;"
-        label.setText("<font style='%s'>%s</font>" % (font_style, title))
 
-        # turn it into an action
+        label = self.get_label(title)
+
         action = QtGui.QWidgetAction(self)
         action.setDefaultWidget(label)
 
@@ -194,7 +200,7 @@ class ShotgunMenu(QtGui.QMenu):
         else:
             # the typed key isn't one we recognize for matching. call the
             # default implementation
-            super(ShotgunMenu, self).keyReleaseEvent(event)
+            super().keyReleaseEvent(event)
             self._type_timer.start()
             return
 
@@ -215,7 +221,7 @@ class ShotgunMenu(QtGui.QMenu):
                 pass
 
         # didn't find a match, call the base class
-        super(ShotgunMenu, self).keyReleaseEvent(event)
+        super().keyReleaseEvent(event)
 
         # ensure the timer is started
         self._type_timer.start()

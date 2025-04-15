@@ -319,9 +319,6 @@ class NoteWidget(ActivityStreamBaseWidget):
         self.selection_changed.emit(self.selected, self._note_id)
 
     def _add_attachment_group(self, attachments, after_note):
-        """
-
-        """
         curr_attachment_group_widget_id = len(self._attachment_group_widgets)
         attachment_group = AttachmentGroupWidget(
             parent=self,
@@ -341,9 +338,9 @@ class NoteWidget(ActivityStreamBaseWidget):
         self.ui.reply_layout.addWidget(attachment_group)
 
         # add it to our mapping dict and increment the counter
-        self._attachment_group_widgets[
-            curr_attachment_group_widget_id
-        ] = attachment_group
+        self._attachment_group_widgets[curr_attachment_group_widget_id] = (
+            attachment_group
+        )
 
     def __generate_note_links_table(self, links):
         """

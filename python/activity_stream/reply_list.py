@@ -24,8 +24,6 @@ from .widget_attachment_group import AttachmentGroupWidget
 from .widget_reply import ReplyWidget
 from .overlaywidget import SmallOverlayWidget
 
-utils = sgtk.platform.import_framework("tk-framework-shotgunutils", "utils")
-
 
 class ReplyListWidget(QtGui.QWidget):
     """
@@ -278,7 +276,6 @@ class ReplyListWidget(QtGui.QWidget):
             self.ui.reply_layout.removeWidget(x)
             # set it's parent to None so that it is removed from the widget hierarchy
             x.setParent(None)
-            utils.safe_delete_later(x)
 
         self._general_widgets = []
         self._reply_widgets = []
@@ -330,9 +327,9 @@ class ReplyListWidget(QtGui.QWidget):
         self.ui.reply_layout.addWidget(attachment_group)
 
         # add it to our mapping dict and increment the counter
-        self._attachment_group_widgets[
-            curr_attachment_group_widget_id
-        ] = attachment_group
+        self._attachment_group_widgets[curr_attachment_group_widget_id] = (
+            attachment_group
+        )
 
     def _add_replies_and_attachments(self, replies_and_attachments):
         """

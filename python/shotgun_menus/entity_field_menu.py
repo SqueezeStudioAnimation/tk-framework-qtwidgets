@@ -89,7 +89,7 @@ class EntityFieldMenu(ShotgunMenu):
                                cache location will be returned if the current
                                context does not have an associated project.
         """
-        super(EntityFieldMenu, self).__init__(parent)
+        super().__init__(parent)
 
         self._bundle = sgtk.platform.current_bundle()
         self._sg_entity_type = sg_entity_type
@@ -298,7 +298,7 @@ class EntityFieldMenu(ShotgunMenu):
         if bubble_fields:
 
             linked_menus = []
-            for (field, field_info) in bubble_fields.items():
+            for field, field_info in bubble_fields.items():
                 # pull all the bubbled field data in an order that sorts by display name
                 sorted_items = sorted(
                     zip(
@@ -309,7 +309,7 @@ class EntityFieldMenu(ShotgunMenu):
                 )
 
                 entity_menus = []
-                for (type_name, entity_type, bubble_base) in sorted_items:
+                for type_name, entity_type, bubble_base in sorted_items:
                     # build the menu for this entity passing on our state
                     entity_menu = EntityFieldMenu(
                         entity_type, parent=self, bg_task_manager=self._task_manager
@@ -330,7 +330,7 @@ class EntityFieldMenu(ShotgunMenu):
                 elif len(entity_menus) > 1:
                     # otherwise add an intermediate menu for each possible entity type
                     bubble_menu = QtGui.QMenu(field_info["name"])
-                    for (type_name, entity_menu) in entity_menus:
+                    for type_name, entity_menu in entity_menus:
                         entity_menu.setTitle(type_name)
                         bubble_menu.addMenu(entity_menu)
                     linked_menus.append(bubble_menu)

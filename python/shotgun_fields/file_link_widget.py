@@ -12,7 +12,6 @@ import os
 
 import sgtk
 from sgtk.platform.qt import QtCore, QtGui
-from tank_vendor import six
 from .label_base_widget import ElidedLabelBaseWidget
 from .shotgun_field_meta import ShotgunFieldMeta
 
@@ -20,8 +19,7 @@ from .shotgun_field_meta import ShotgunFieldMeta
 from .ui import resources_rc
 
 
-@six.add_metaclass(ShotgunFieldMeta)
-class FileLinkWidget(ElidedLabelBaseWidget):
+class FileLinkWidget(ElidedLabelBaseWidget, metaclass=ShotgunFieldMeta):
     """
     Display a ``url`` field value as returned by the Shotgun API.
 
@@ -243,7 +241,7 @@ class FileLinkWidget(ElidedLabelBaseWidget):
                 return
             url = result[self._field_name]["url"]
 
-            # SG returns an encoded url already. make sure it doesn't get
+            # PTR returns an encoded url already. make sure it doesn't get
             # a second encoding pass (the default translation from python str
             # to QUrl seems to assume the str is not encoded).
             url = QtCore.QUrl.fromEncoded(url)
@@ -318,7 +316,7 @@ class FileLinkWidget(ElidedLabelBaseWidget):
             local_path = value["local_path"]
             # for file on OS that differs from the current OS, this will
             # result in the display of the full path rather than just the
-            # file basename.ext (the SG behavior).
+            # file basename.ext (the PTR behavior).
             file_name = os.path.split(local_path)[-1]
             img_src = ":/qtwidgets-shotgun-fields/link_%s.png" % (value["link_type"],)
             hyperlink = utils.get_hyperlink_html(local_path, file_name)
@@ -391,7 +389,7 @@ class _EditWebLinkDialog(QtGui.QDialog):
         :return:
         """
 
-        super(_EditWebLinkDialog, self).__init__(parent)
+        super().__init__(parent)
 
         self.setMinimumWidth(350)
 
@@ -419,7 +417,7 @@ class _EditWebLinkDialog(QtGui.QDialog):
         btn_palette = self.palette()
         btn_palette.setColor(QtGui.QPalette.Button, btn_color)
 
-        # color the button to match the SG version.
+        # color the button to match the PTR version.
         self._add_link_btn = QtGui.QPushButton("Add Link")
         self._add_link_btn.setEnabled(False)
         self._add_link_btn.setPalette(btn_palette)

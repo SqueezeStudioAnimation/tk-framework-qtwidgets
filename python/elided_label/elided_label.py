@@ -16,8 +16,6 @@ correctly within the widget frame.  Handles rich-text.
 import sgtk
 from sgtk.platform.qt import QtCore, QtGui
 
-utils = sgtk.platform.import_framework("tk-framework-shotgunutils", "utils")
-
 
 class ElidedLabel(QtGui.QLabel):
     """
@@ -41,7 +39,7 @@ class ElidedLabel(QtGui.QLabel):
 
     def sizeHint(self):
 
-        base_size_hint = super(ElidedLabel, self).sizeHint()
+        base_size_hint = super().sizeHint()
 
         return QtCore.QSize(self._get_width_hint(), base_size_hint.height())
 
@@ -57,8 +55,6 @@ class ElidedLabel(QtGui.QLabel):
                 width = doc.idealWidth()
             except Exception:
                 width = self.width()
-            finally:
-                utils.safe_delete_later(doc)
 
             self._ideal_width = width
 
@@ -110,7 +106,7 @@ class ElidedLabel(QtGui.QLabel):
         self._update_elided_text()
 
         # if we're elided, make the tooltip show the full text
-        if super(ElidedLabel, self).text() != self._actual_text:
+        if super().text() != self._actual_text:
             # wrap the actual text in a paragraph so that it wraps nicely
             self.setToolTip("<p>%s</p>" % (self._actual_text,))
         else:
@@ -210,8 +206,8 @@ class ElidedLabel(QtGui.QLabel):
 
             self._line_width = line_width
             return doc.toHtml()
-        finally:
-            utils.safe_delete_later(doc)
+        except:
+            pass
 
     @property
     def line_width(self):
